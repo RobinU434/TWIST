@@ -70,9 +70,32 @@ def build_mimic_obs(motion_lib: MotionLib, t_step: int, control_dt: float, tar_o
     motion_ids = torch.zeros(len(tar_obs_steps), dtype=torch.int, device=device)
 
     # Retrieve motion frame data from the library
+    # root_pos.shape: (1, 3)
+    # root_rot.shape: (1, 4)
+    # root_vel.shape: (1, 3)
+    # root_ang_vel.shape: (1, 3)
+    # dof_pos.shape: (1, num_joints)
     root_pos, root_rot, root_vel, root_ang_vel, dof_pos, _, _ = motion_lib.calc_motion_frame(
         motion_ids, obs_motion_times
     )
+
+    #########################################################################################
+    # HERE I want to exchange the variables root_pos, root_rot, root_vel, root_ang_vel, dof_pos with the data from data_pos, data_dec_out
+    # data_pos are the 3D positions of the joints
+    # data_dec_out is the output from the vae, it has features like ric positions, root positions, root rotations, root velocities, root angular velocities
+    # Somehow I can not directly use data_dec_out to replace the variables, because the output visualization looks weird but I do not know why
+    data_pos = np.load("../assets/test_motion_from_llm/a_person_is_walking_pos.npy")
+    data_dec_out = np.load("../assets/test_motion_from_llm/a_person_is_walking_dec_out.npy")
+
+    # The dataset of TWIST is 30Hz
+    # The dataset from the LLM is 20Hz
+    data_idx = (obs_motion_times * 20).int().cpu().numpy()[0]  # Assuming 20Hz data rate
+
+    breakpoint()
+
+    # root_pos, root_rot, dof_pos are used by MuJoCo viewer
+    # The RL policy uses only mimic_obs_buf
+    #########################################################################################
 
     # Convert root orientation from quaternion to Euler angles (roll, pitch, yaw)
     roll, pitch, yaw = euler_from_quaternion(root_rot)
@@ -270,7 +293,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--motion_file",
         help="Path to your *.pkl motion file for MotionLib",
-        default="/Users/jbeisswenger/Desktop/PhD/Humanoid_VLA/humanoid-vla/TWIST/twist_motion_dataset/home/yanjieze/projects/g1_wbc/humanoid-motion-imitation/track_dataset/twist_motion_dataset/bmlhandball/S01_Expert_Trial_upper_left_005.pkl",
+        default="/Users/jbeisswenger/Desktop/PhD/Humanoid_VLA/humanoid-vla/TWIST/twist_motion_dataset/home/yanjieze/projects/g1_wbc/humanoid-motion-imitation/track_dataset/twist_motion_dataset/biomotionlab_ntroje/rub103_0005_normal_walk1.pkl",
     )
     parser.add_argument("--robot", type=str, default="g1", choices=["g1"])
     parser.add_argument(
